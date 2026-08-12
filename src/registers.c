@@ -24,3 +24,10 @@ word read_register(Registers *regs, unsigned int index){
 
     return regs->gpr[index];
 }
+
+void write_register(Registers *regs, unsigned int index, word value){
+    assert(regs != NULL);
+    assert(index < GPR_COUNT);
+
+    regs->gpr[index] = value;
+}
