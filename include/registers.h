@@ -21,6 +21,7 @@ typedef struct registers
 
 void init_registers(Registers *regs);
 word read_register(Registers *regs, unsigned int index);
+void write_register(Registers *regs, unsigned int index, word value);
 
 
 #endif
