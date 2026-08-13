@@ -2,11 +2,9 @@
 #include <assert.h>
 #include "registers.h"
 
-void init_registers(Registers *regs){
-
-    if(regs == NULL){
-        return;
-    }
+void init_registers(Registers *regs)
+{
+    assert(regs != NULL);
 
     for(int i = 0; i < GPR_COUNT; i++){
         regs->gpr[i] = 0;
@@ -18,16 +16,39 @@ void init_registers(Registers *regs){
     regs->sr = 0;
 }
 
-word read_register(Registers *regs, unsigned int index){
+word read_register(Registers *regs, unsigned int index)
+{
     assert(regs != NULL);
     assert(index < GPR_COUNT);
 
     return regs->gpr[index];
 }
 
-void write_register(Registers *regs, unsigned int index, word value){
+void write_register(Registers *regs, unsigned int index, word value)
+{
     assert(regs != NULL);
     assert(index < GPR_COUNT);
 
     regs->gpr[index] = value;
+}
+
+void advance_pc(Registers *regs)
+{
+    assert(regs != NULL);
+
+    regs->pc++;
+}
+
+void load_pc(Registers *regs, word new_pc)
+{
+    assert(regs != NULL);
+
+    regs->pc = new_pc;
+}
+
+void load_ir(Registers *regs, word new_ir)
+{
+    assert(regs != NULL);
+
+    regs->ir = new_ir;
 }
