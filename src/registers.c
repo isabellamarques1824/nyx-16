@@ -1,5 +1,5 @@
-#include <stdlib.h>
 #include <assert.h>
+#include <stdbool.h>
 #include "registers.h"
 
 void init_registers(Registers *regs)
@@ -16,7 +16,7 @@ void init_registers(Registers *regs)
     regs->sr = 0;
 }
 
-word read_register(Registers *regs, unsigned int index)
+word read_register(const Registers *regs, unsigned int index)
 {
     assert(regs != NULL);
     assert(index < GPR_COUNT);
@@ -52,3 +52,28 @@ void load_ir(Registers *regs, word new_ir)
 
     regs->ir = new_ir;
 }
+
+void set_flag(Registers *regs, Flag flag, bool value){
+    assert(regs != NULL);
+
+    if(value){
+        regs->sr = regs->sr | flag;
+    }else{
+        regs->sr = regs->sr & ~flag;
+    }
+
+
+    
+}
+
+bool read_flag(const Registers *regs, Flag flag){
+
+    assert(regs != NULL);
+
+    if((regs->sr & flag) != 0){
+        return true;
+    }
+    return false;
+}
+
+// o comportamento do registrador sp vai ser definido depois de implementar stack

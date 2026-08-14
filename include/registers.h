@@ -19,9 +19,21 @@ typedef struct registers
 
 }Registers;
 
+typedef enum
+{
+    FLAG_ZERO = 1u << 0,
+    FLAG_NEGATIVE = 1u << 1,
+    FLAG_CARRY = 1u << 2,
+    FLAG_OVERFLOW = 1u << 3
+} Flag;
+
 void init_registers(Registers *regs);
 word read_register(Registers *regs, unsigned int index);
 void write_register(Registers *regs, unsigned int index, word value);
-
+void advance_pc(Registers *regs);
+void load_pc(Registers *regs, word new_pc);
+void load_ir(Registers *regs, word new_ir);
+void set_flag(Registers *regs, Flag flag, bool value);
+bool read_flag(const Registers *regs, Flag flag);
 
 #endif
