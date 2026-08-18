@@ -1,11 +1,7 @@
 #ifndef REGISTERS_H
 #define REGISTERS_H
 
-#include <stdint.h>
-
 #define GPR_COUNT 8
-
-typedef uint16_t word;
 
 typedef struct registers
 {
@@ -28,7 +24,7 @@ typedef enum
 } Flag;
 
 void init_registers(Registers *regs);
-word read_register(Registers *regs, unsigned int index);
+word read_register(const Registers *regs, unsigned int index);
 void write_register(Registers *regs, unsigned int index, word value);
 void advance_pc(Registers *regs);
 void load_pc(Registers *regs, word new_pc);
