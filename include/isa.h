@@ -13,4 +13,27 @@ typedef enum{
 
 }RegisterCode;
 
+typedef enum
+{
+    NOP = 0,
+    HALT = 1,
+    MOV = 2,
+    LDI = 3,
+    LOAD = 4,
+    STORE = 5,
+    ADD = 6,
+    SUB = 7,
+    AND = 8,
+    OR = 9,
+    XOR = 10,
+    NOT = 11,
+    CMP = 12,
+    JMP = 13,
+    JZ = 14,
+    JNZ = 15,
+    JN = 16,
+    PUSH = 17,
+    POP = 18
+} Opcode;
+
 #endif

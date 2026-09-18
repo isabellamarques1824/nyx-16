@@ -38,7 +38,7 @@ void advance_pc(Registers *regs)
 {
     assert(regs != NULL);
 
-    regs->pc++;
+    regs->pc += 2;
 }
 
 void load_pc(Registers *regs, word new_pc)
