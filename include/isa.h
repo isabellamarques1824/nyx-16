@@ -13,27 +13,44 @@ typedef enum{
 
 }RegisterCode;
 
-typedef enum
-{
-    NOP = 0,
-    HALT = 1,
-    MOV = 2,
-    LDI = 3,
-    LOAD = 4,
-    STORE = 5,
-    ADD = 6,
-    SUB = 7,
-    AND = 8,
-    OR = 9,
-    XOR = 10,
-    NOT = 11,
-    CMP = 12,
-    JMP = 13,
-    JZ = 14,
-    JNZ = 15,
-    JN = 16,
-    PUSH = 17,
-    POP = 18
+typedef enum {
+    OP_NOP = 0,
+    OP_HALT = 1,
+    OP_MOV = 2,
+    OP_LDI = 3,
+    OP_LOAD = 4,
+    OP_STORE = 5,
+    OP_ADD = 6,
+    OP_SUB = 7, 
+    OP_AND = 8,
+    OP_OR = 9,
+    OP_XOR = 10,
+    OP_NOT = 11,
+    OP_CMP = 12,
+    OP_JMP = 13,
+    OP_JZ = 14,
+    OP_JNZ = 15,
+    OP_JN = 16,
+    OP_PUSH = 17,
+    OP_POP = 18
 } Opcode;
+
+typedef enum {
+    FORMAT_NONE,
+    FORMAT_R,
+    FORMAT_RR,
+    FORMAT_RP,
+    FORMAT_A
+} InstructionFormat;
+
+#define INSTRUCTION_WORDS 2
+
+#define OPCODE_SHIFT 11
+#define REG1_SHIFT 8
+#define REG2_SHIFT 5
+
+#define OPCODE_MASK 0xF800
+#define REG1_MASK   0x0700
+#define REG2_MASK   0x00E0
 
 #endif
