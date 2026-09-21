@@ -1,6 +1,8 @@
 #ifndef ISA_H
 #define ISA_H
 
+#include "types.h"
+
 typedef enum{
     REG_R0 = 0,
     REG_R1 = 1,
@@ -40,7 +42,8 @@ typedef enum {
     FORMAT_R,
     FORMAT_RR,
     FORMAT_RP,
-    FORMAT_A
+    FORMAT_A,
+    FORMAT_INVALID
 } InstructionFormat;
 
 #define INSTRUCTION_WORDS 2
@@ -52,5 +55,14 @@ typedef enum {
 #define OPCODE_MASK 0xF800
 #define REG1_MASK   0x0700
 #define REG2_MASK   0x00E0
+
+#define PROGRAM_BASE 0x0000
+
+#define ADDRESS_WIDTH 16
+
+#define HEAP_BASE 0x2000
+#define STACK_BASE 0xFFFF
+
+InstructionFormat get_instruction_format(Opcode opcode);
 
 #endif

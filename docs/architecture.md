@@ -1,285 +1,82 @@
-# Nyx-16 Architecture
+# NYX-16 Architecture
 
-## Overview
+NYX-16 is a virtual 16-bit computer architecture implemented in C.
 
-Nyx-16 is a virtual 16-bit computer implemented in C.
+The architecture is designed as an educational project for studying how a computer executes programs at the machine level, including registers, arithmetic and logical operations, memory, instruction encoding, instruction decoding, control flow, and the fetch-decode-execute cycle.
 
-The project simulates the essential structure and behavior of a simple computer, including a central processing unit, memory, registers, machine instructions and the fetch-decode-execute cycle.
-
-Nyx-16 does not simulate individual electronic components or electrical signals. Instead, it reproduces the logical behavior of the computer architecture using C structures, arrays, functions and bitwise operations.
-
-The first version focuses on the smallest complete architecture capable of storing and executing a machine program.
+NYX-16 uses a small fixed instruction set and a regular instruction encoding in order to keep the architecture simple enough to understand while still being capable of executing non-trivial programs.
 
 ---
 
-## Version 1.0
+# 1. Architectural Overview
 
-Nyx-16 v1.0 is the first functional version of the virtual computer.
+The main architectural characteristics of NYX-16 are:
 
-This version will be capable of:
+* 16-bit word size
+* 16-bit registers
+* 8 general-purpose registers
+* 16-bit memory addresses
+* word-addressed memory
+* 65,536 addressable words
+* 128 KiB total addressable memory
+* unified memory for instructions and data
+* fixed 32-bit instructions
+* 2 words per instruction
+* 5-bit opcode field
+* stack support
+* direct memory addressing
+* arithmetic and logical status flags
+* conditional and unconditional control flow
 
-* storing machine instructions in virtual memory;
-* storing program data in virtual memory;
-* reading instructions sequentially;
-* decoding 16-bit machine instructions;
-* executing arithmetic and logical operations;
-* transferring values between registers and memory;
-* changing the execution flow through jump instructions;
-* stopping the processor through a `HALT` instruction.
-
-Programs will initially be written directly as 16-bit machine instructions and inserted into memory by the C implementation.
-
-Nyx-16 v1.0 will not yet include an assembly language, assembler, binary loader, stack, system calls or operating system.
-
----
-
-# Architecture Summary
-
-Nyx-16 v1.0 is composed of two main parts:
-
-```text
-NYX-16
-├── CPU
-└── RAM
-```
-
-The CPU contains:
+The CPU is conceptually composed of:
 
 ```text
 CPU
-├── General-purpose registers
+├── General-Purpose Registers
 ├── Program Counter
+├── Stack Pointer
+├── Status Register
 ├── Instruction Register
-├── Arithmetic Logic Unit
-├── Flags
+├── ALU
 ├── Instruction Decoder
-├── Control Unit
-└── Execution state
+└── Control Unit
 ```
-
-The computer also requires:
-
-```text
-Instruction Set Architecture
-├── Instruction formats
-├── Opcodes
-├── Register encoding
-└── Instruction behavior
-```
-
-These components work together through the fetch-decode-execute cycle.
 
 ---
 
-# 16-Bit Architecture
+# 2. Word and Data Model
 
-Nyx-16 is based on 16-bit words.
-
-A word is the primary unit of information used by the architecture.
-
-Each word contains exactly 16 bits:
+The fundamental data unit of NYX-16 is the **word**.
 
 ```text
-0000 0000 0000 0000
+1 word = 16 bits
 ```
 
-A 16-bit word can represent:
+Registers, ALU operations, memory cells, addresses, and general data manipulation are based primarily on 16-bit values.
+
+In the C implementation, a word is represented by a 16-bit unsigned integer type.
+
+A 16-bit value may be interpreted differently depending on the instruction that uses it.
+
+For example, the same bit pattern may represent:
 
 * an unsigned integer;
 * a signed integer;
 * a memory address;
-* a machine instruction;
-* program data;
-* bit flags.
+* an immediate value;
+* or a raw bit pattern.
 
-The same sequence of bits may have different meanings depending on how it is being used.
-
-For example:
-
-```text
-0000 0000 0000 0101
-```
-
-This word may represent:
-
-```text
-Unsigned integer: 5
-Signed integer:   5
-Instruction data: depends on the instruction format
-```
-
-Nyx-16 will use fixed-width integer types from `<stdint.h>` to guarantee that architecture values always contain the expected number of bits.
+Signed arithmetic uses two's complement representation.
 
 ---
 
-# Numeric Range
+# 3. Registers
 
-A 16-bit unsigned value can represent:
+NYX-16 contains eight general-purpose registers and several special-purpose CPU registers.
 
-```text
-0 to 65,535
-```
+## 3.1 General-Purpose Registers
 
-A 16-bit signed value using two's complement can represent:
-
-```text
--32,768 to 32,767
-```
-
-Registers and memory positions store only bits.
-
-Whether a value is interpreted as signed or unsigned depends on the operation being executed.
-
----
-
-# Memory Architecture
-
-## Memory Organization
-
-Nyx-16 v1.0 uses word-addressed memory.
-
-This means that every memory address refers to one complete 16-bit word.
-
-Conceptually:
-
-```text
-RAM[address] = 16-bit word
-```
-
-Examples:
-
-```text
-RAM[0x0000] = 16-bit instruction
-RAM[0x0001] = 16-bit instruction
-RAM[0x0100] = 16-bit program data
-```
-
-The RAM stores both instructions and data.
-
-There is no separate instruction memory and data memory in version 1.0.
-
----
-
-## Address Space
-
-Nyx-16 uses 16-bit memory addresses.
-
-A 16-bit address can represent:
-
-```text
-2¹⁶ = 65,536 different addresses
-```
-
-The valid address range is:
-
-```text
-0x0000 to 0xFFFF
-```
-
-Therefore, Nyx-16 contains:
-
-```text
-65,536 memory positions
-```
-
-Each position stores one 16-bit word.
-
-Since one 16-bit word contains two bytes, the total simulated memory capacity is:
-
-```text
-65,536 words × 2 bytes
-```
-
-Result:
-
-```text
-131,072 bytes
-```
-
-Equivalent to:
-
-```text
-128 KiB
-```
-
-The C implementation can represent this memory as a fixed-size array of 16-bit values.
-
----
-
-## Memory Responsibilities
-
-The memory component is responsible for:
-
-* storing machine instructions;
-* storing program data;
-* returning the word stored at an address;
-* writing a word to an address;
-* resetting memory to its initial state.
-
-Conceptually, it provides the following operations:
-
-```text
-Read memory
-Write memory
-Reset memory
-```
-
----
-
-## Initial Memory State
-
-When the Nyx-16 computer is initialized, all memory positions must contain zero.
-
-```text
-RAM[0x0000] = 0
-RAM[0x0001] = 0
-RAM[0x0002] = 0
-...
-RAM[0xFFFF] = 0
-```
-
-Programs will later be copied into selected memory positions before execution begins.
-
----
-
-# Central Processing Unit
-
-The CPU is responsible for reading and executing machine instructions.
-
-The CPU contains the state required to continue program execution from one cycle to the next.
-
-Its main components are:
-
-```text
-CPU
-├── General-purpose registers
-├── Program Counter
-├── Instruction Register
-├── Flags
-├── ALU
-├── Decoder
-├── Control Unit
-└── Halted state
-```
-
----
-
-# General-Purpose Registers
-
-Registers are small storage locations located inside the CPU.
-
-They hold values currently being used by instructions.
-
-Registers are used to:
-
-* store arithmetic operands;
-* store logical operands;
-* store calculation results;
-* temporarily hold values read from RAM;
-* hold values before writing them to RAM;
-* transfer values between instructions.
-
-Nyx-16 v1.0 will contain eight general-purpose registers:
+The general-purpose registers are:
 
 ```text
 R0
@@ -292,677 +89,1008 @@ R6
 R7
 ```
 
-Each register stores one 16-bit word.
+Each general-purpose register stores one 16-bit word.
 
-Example CPU state:
+All eight registers are currently equivalent and have no special architectural behavior.
 
-```text
-R0 = 0x0005
-R1 = 0x0007
-R2 = 0x0000
-R3 = 0x0000
-R4 = 0x0000
-R5 = 0x0000
-R6 = 0x0000
-R7 = 0x0000
-```
+They may be used as operands and destinations for instructions.
 
-After an addition between `R0` and `R1`:
+Because there are eight general-purpose registers, a register can be identified using three bits.
 
-```text
-R0 = R0 + R1
-```
+| Register | Code | Binary |
+| -------- | ---: | -----: |
+| R0       |    0 |  `000` |
+| R1       |    1 |  `001` |
+| R2       |    2 |  `010` |
+| R3       |    3 |  `011` |
+| R4       |    4 |  `100` |
+| R5       |    5 |  `101` |
+| R6       |    6 |  `110` |
+| R7       |    7 |  `111` |
 
-The CPU state becomes:
-
-```text
-R0 = 0x000C
-R1 = 0x0007
-```
-
-All registers must contain zero when the CPU is initialized.
+These codes are represented in C by `RegisterCode`.
 
 ---
 
-# Program Counter
+## 3.2 Program Counter — PC
 
-The Program Counter, abbreviated as `PC`, is a special 16-bit register.
+The Program Counter is a 16-bit special-purpose register.
 
-It stores the memory address of the next instruction that the CPU must fetch.
+Its initial value is:
+
+```text
+0x0000
+```
+
+The PC contains the address of the first word of the next instruction to be fetched.
+
+Because every NYX-16 instruction occupies two words, normal sequential execution advances the PC by two word addresses.
 
 Example:
 
 ```text
 PC = 0x0000
+
+Instruction:
+RAM[0x0000] → Word 1
+RAM[0x0001] → Word 2
+
+Next sequential instruction:
+PC = 0x0002
 ```
 
-The CPU reads the instruction stored at:
+Control-flow instructions may replace the normal sequential value of the PC.
 
-```text
-RAM[0x0000]
-```
-
-After fetching the instruction, the PC normally advances:
-
-```text
-PC = PC + 1
-```
-
-The next instruction is then fetched from:
-
-```text
-RAM[0x0001]
-```
-
-This process creates sequential program execution.
-
-Jump instructions can replace the current PC value with another address.
-
-Example:
+For example:
 
 ```text
 JMP 0x0100
-```
 
-Result:
-
-```text
-PC = 0x0100
-```
-
-The Program Counter makes the following behaviors possible:
-
-* sequential execution;
-* conditional execution;
-* loops;
-* branches;
-* future function calls.
-
-The PC begins at address `0x0000` in Nyx-16 v1.0.
-
----
-
-# Instruction Register
-
-The Instruction Register, abbreviated as `IR`, stores the 16-bit instruction currently being processed by the CPU.
-
-During the fetch stage:
-
-```text
-IR = RAM[PC]
-```
-
-The decoder reads the bits stored in the IR to identify:
-
-* the opcode;
-* the instruction format;
-* registers;
-* immediate values;
-* memory addresses.
-
-The IR preserves the current instruction while the CPU decodes and executes it.
-
-The Instruction Register contains zero when the CPU is initialized.
-
----
-
-# Arithmetic Logic Unit
-
-The Arithmetic Logic Unit, abbreviated as `ALU`, performs arithmetic and logical operations.
-
-The ALU receives input values, applies an operation and produces a 16-bit result.
-
-Example:
-
-```text
-Input A:   0x0005
-Input B:   0x0007
-Operation: ADD
-Result:    0x000C
-```
-
-Nyx-16 v1.0 may support operations such as:
-
-```text
-ADD
-SUB
-AND
-OR
-XOR
-NOT
-```
-
-The ALU also provides information used to update the CPU flags.
-
-Because Nyx-16 is implemented in software, the ALU does not need to recreate individual logic gates.
-
-Its behavior can be implemented using C arithmetic and bitwise operators while preserving 16-bit results.
-
----
-
-# CPU Flags
-
-Flags store information about the result of the most recently executed operation.
-
-Nyx-16 v1.0 contains two basic flags:
-
-```text
-Z — Zero Flag
-N — Negative Flag
-```
-
-## Zero Flag
-
-The Zero Flag is active when the result of an operation is zero.
-
-```text
-Z = 1 when result == 0
-Z = 0 otherwise
-```
-
-Example:
-
-```text
-5 - 5 = 0
-```
-
-Result:
-
-```text
-Z = 1
+PC ← 0x0100
 ```
 
 ---
 
-## Negative Flag
+## 3.3 Stack Pointer — SP
 
-The Negative Flag is active when the result represents a negative 16-bit signed value.
+The Stack Pointer is a 16-bit special-purpose register used to manage the stack.
 
-In two's complement, the most significant bit indicates whether the value is negative.
-
-```text
-N = 1 when the most significant bit is 1
-N = 0 otherwise
-```
-
-Example:
+Its initial value is:
 
 ```text
-1111 1111 1111 1111
+0xFFFF
 ```
 
-This represents `-1` as a signed 16-bit value.
+The stack grows toward lower memory addresses.
 
-Result:
+The SP points to the next free stack position.
 
-```text
-N = 1
-```
-
-Flags are used by conditional jump instructions.
+The exact PUSH and POP behavior is defined in the Stack section.
 
 ---
 
-# Instruction Set Architecture
+## 3.4 Status Register — SR
 
-The Instruction Set Architecture, abbreviated as `ISA`, defines the machine language understood by the Nyx-16 CPU.
+The Status Register stores CPU status flags generated by arithmetic and logical operations.
 
-The ISA determines:
+NYX-16 currently defines four flags:
 
-* which instructions exist;
-* the numeric opcode assigned to each instruction;
-* how instruction bits are organized;
-* which registers are used;
-* how memory is accessed;
-* how flags are modified;
-* how jumps modify the Program Counter.
+```text
+ZERO
+NEGATIVE
+CARRY
+OVERFLOW
+```
 
-The ISA is the interface between software and the processor.
+### ZERO
 
-Programs must follow the ISA specification to be executed correctly.
+Indicates that the result of an operation is zero.
+
+```text
+result == 0
+```
+
+### NEGATIVE
+
+Indicates that the result has its most significant bit set and is therefore negative when interpreted as a signed two's complement value.
+
+### CARRY
+
+Indicates an unsigned arithmetic carry or borrow condition according to the operation being executed.
+
+### OVERFLOW
+
+Indicates that a signed arithmetic result cannot be represented correctly using 16 bits.
+
+The exact instructions that modify each flag are still being finalized.
 
 ---
 
-# Instruction Format
+## 3.5 Instruction Register — IR
 
-Every Nyx-16 machine instruction occupies one 16-bit word.
+The implementation of the NYX-16 CPU contains an Instruction Register.
 
-The 16 bits are divided into fields.
+The IR is used internally during instruction processing.
 
-Different instruction categories may interpret the remaining bits differently.
+Unlike R0-R7, the IR is not directly selectable as an operand by machine instructions.
 
-A register-based instruction may use a format similar to:
+It should therefore be considered primarily an implementation-level CPU register rather than a general-purpose architectural register.
 
-```text
-OOOO DDDD SSSS XXXX
-```
-
-Where:
-
-```text
-OOOO = opcode
-DDDD = destination register
-SSSS = source register
-XXXX = additional instruction data
-```
-
-An instruction containing an immediate value may use:
-
-```text
-OOOO RRRR IIIIIIII
-```
-
-Where:
-
-```text
-OOOO     = opcode
-RRRR     = register
-IIIIIIII = immediate value
-```
-
-The exact formats and opcode values will be defined in the Nyx-16 ISA specification.
+The exact representation of the IR may be reviewed because NYX-16 instructions contain two 16-bit words.
 
 ---
 
-# Instruction Decoder
+# 4. Instruction Set
 
-The instruction decoder interprets the bits stored in the Instruction Register.
+NYX-16 v1.0 currently defines 19 instructions.
 
-Its responsibilities include:
+| Opcode | Instruction | Operands  | Description                              |
+| -----: | ----------- | --------- | ---------------------------------------- |
+|      0 | `NOP`       | —         | Performs no operation                    |
+|      1 | `HALT`      | —         | Stops CPU execution                      |
+|      2 | `MOV`       | R, R      | Copies one register into another         |
+|      3 | `LDI`       | R, imm16  | Loads a 16-bit immediate value           |
+|      4 | `LOAD`      | R, addr16 | Loads one word from memory               |
+|      5 | `STORE`     | R, addr16 | Stores one register into memory          |
+|      6 | `ADD`       | R, R      | Adds two register values                 |
+|      7 | `SUB`       | R, R      | Subtracts two register values            |
+|      8 | `AND`       | R, R      | Bitwise AND                              |
+|      9 | `OR`        | R, R      | Bitwise OR                               |
+|     10 | `XOR`       | R, R      | Bitwise XOR                              |
+|     11 | `NOT`       | R         | Bitwise NOT                              |
+|     12 | `CMP`       | R, R      | Compares two register values             |
+|     13 | `JMP`       | addr16    | Unconditional jump                       |
+|     14 | `JZ`        | addr16    | Jump if ZERO is set                      |
+|     15 | `JNZ`       | addr16    | Jump if ZERO is clear                    |
+|     16 | `JN`        | addr16    | Jump if NEGATIVE is set                  |
+|     17 | `PUSH`      | R         | Pushes a register value onto the stack   |
+|     18 | `POP`       | R         | Pops the top stack value into a register |
 
-* extracting the opcode;
-* identifying the instruction format;
-* extracting register indexes;
-* extracting immediate values;
-* extracting memory addresses;
-* selecting the behavior that must be executed.
-
-Example instruction:
+Because 19 different instructions are currently defined, the opcode field requires five bits.
 
 ```text
-0010 0001 0010 0000
+2^4 = 16  → insufficient
+
+2^5 = 32  → sufficient
 ```
 
-The decoder may interpret the fields as:
-
-```text
-Opcode:               0010
-Destination register: 0001
-Source register:      0010
-Additional bits:      0000
-```
-
-The instruction fields are extracted using bit masks and bit shifts.
-
-The decoder does not perform the final operation. It determines what the instruction means and provides the decoded information to the control logic.
+The remaining opcode values from 19 through 31 are currently invalid/reserved.
 
 ---
 
-# Control Unit
+# 5. Instruction Semantics
 
-The control unit coordinates the components of the CPU during instruction execution.
+## 5.1 NOP
 
-It uses the decoded instruction to determine:
+```text
+NOP
+```
 
-* which registers must be read;
-* which ALU operation must be performed;
-* where the result must be stored;
-* whether RAM must be read;
-* whether RAM must be written;
-* whether flags must be updated;
-* whether the PC must continue sequentially;
-* whether the PC must jump;
-* whether the CPU must stop.
-
-In the C implementation, the control unit will be represented by the instruction execution logic.
-
-It will connect the decoder output to the behavior of the CPU, ALU, registers and RAM.
+Performs no operation and continues normal execution.
 
 ---
 
-# Execution State
-
-The CPU contains a halted state indicating whether execution is active.
-
-```text
-halted = false
-```
-
-means that the CPU may continue executing instructions.
-
-```text
-halted = true
-```
-
-means that execution has stopped.
-
-The `HALT` instruction changes this state.
-
-The main CPU loop continues only while the halted state is false.
-
----
-
-# Virtual Clock
-
-Physical processors use an electronic clock to synchronize state changes.
-
-Nyx-16 is a software simulation and therefore does not require a physical clock signal.
-
-Each iteration of the execution loop represents one virtual machine cycle.
-
-During a cycle, the CPU:
-
-```text
-Fetches an instruction
-Decodes the instruction
-Executes the instruction
-Updates the machine state
-```
-
-The virtual clock is therefore represented by repeated execution of the CPU cycle.
-
----
-
-# Fetch-Decode-Execute Cycle
-
-Nyx-16 executes programs through the fetch-decode-execute cycle.
-
-## Fetch
-
-The CPU retrieves the next instruction from RAM.
-
-```text
-IR = RAM[PC]
-PC = PC + 1
-```
-
-At the end of the fetch stage:
-
-* the IR contains the current instruction;
-* the PC points to the next sequential instruction.
-
----
-
-## Decode
-
-The decoder examines the instruction stored in the IR.
-
-It extracts:
-
-* the opcode;
-* register identifiers;
-* immediate values;
-* addresses;
-* instruction-specific fields.
-
-The decoder determines which operation must be executed.
-
----
-
-## Execute
-
-The control unit performs the instruction behavior.
-
-Depending on the instruction, execution may:
-
-* modify a register;
-* perform an ALU operation;
-* read from RAM;
-* write to RAM;
-* update flags;
-* change the PC;
-* halt the processor.
-
-After execution, the cycle starts again.
-
-```text
-FETCH
-  ↓
-DECODE
-  ↓
-EXECUTE
-  ↓
-FETCH
-```
-
----
-
-# Initial Instruction Set
-
-The first Nyx-16 instruction set should remain small while still allowing the execution of useful programs.
-
-## Data Instructions
-
-```text
-LOADI
-```
-
-Loads a constant value directly into a register.
-
-```text
-LOAD
-```
-
-Loads a word from RAM into a register.
-
-```text
-STORE
-```
-
-Stores a register value in RAM.
-
-```text
-MOV
-```
-
-Copies a value from one register to another.
-
----
-
-## Arithmetic Instructions
-
-```text
-ADD
-```
-
-Adds two register values.
-
-```text
-SUB
-```
-
-Subtracts one register value from another.
-
----
-
-## Logical Instructions
-
-```text
-AND
-OR
-XOR
-NOT
-```
-
-Perform bitwise logical operations.
-
----
-
-## Control Flow Instructions
-
-```text
-JMP
-```
-
-Changes the Program Counter unconditionally.
-
-```text
-JZ
-```
-
-Changes the Program Counter when the Zero Flag is active.
+## 5.2 HALT
 
 ```text
 HALT
 ```
 
-Stops CPU execution.
-
-The final instruction list may be adjusted during the ISA design stage.
+Stops the execution cycle of the CPU.
 
 ---
 
-# Program Storage
+## 5.3 MOV
 
-Nyx-16 programs are stored in RAM as sequences of 16-bit machine instructions.
+```text
+MOV Rd, Rs
+```
+
+Copies the value contained in the source register into the destination register.
+
+```text
+Rd ← Rs
+```
+
+The source register is not modified.
+
+---
+
+## 5.4 LDI
+
+```text
+LDI Rd, immediate
+```
+
+Loads a 16-bit immediate value directly into a register.
+
+```text
+Rd ← immediate
+```
+
+The immediate value is stored in the second word of the instruction.
+
+---
+
+## 5.5 LOAD
+
+```text
+LOAD Rd, address
+```
+
+Reads one 16-bit word from memory and stores it in a register.
+
+```text
+Rd ← RAM[address]
+```
+
+The address is stored in the second word of the instruction.
+
+---
+
+## 5.6 STORE
+
+```text
+STORE Rs, address
+```
+
+Writes the contents of a register into memory.
+
+```text
+RAM[address] ← Rs
+```
+
+The address is stored in the second word of the instruction.
+
+---
+
+## 5.7 ADD
+
+```text
+ADD Rd, Rs
+```
+
+Adds the values of two registers and stores the result in the first register.
+
+```text
+Rd ← Rd + Rs
+```
+
+The operation is executed by the ALU.
+
+---
+
+## 5.8 SUB
+
+```text
+SUB Rd, Rs
+```
+
+Subtracts the second register from the first and stores the result in the first register.
+
+```text
+Rd ← Rd - Rs
+```
+
+The operation is executed by the ALU.
+
+---
+
+## 5.9 AND
+
+```text
+AND Rd, Rs
+```
+
+Performs a bitwise AND.
+
+```text
+Rd ← Rd AND Rs
+```
+
+---
+
+## 5.10 OR
+
+```text
+OR Rd, Rs
+```
+
+Performs a bitwise OR.
+
+```text
+Rd ← Rd OR Rs
+```
+
+---
+
+## 5.11 XOR
+
+```text
+XOR Rd, Rs
+```
+
+Performs a bitwise XOR.
+
+```text
+Rd ← Rd XOR Rs
+```
+
+---
+
+## 5.12 NOT
+
+```text
+NOT Rd
+```
+
+Inverts every bit in the selected register.
+
+```text
+Rd ← NOT Rd
+```
+
+---
+
+## 5.13 CMP
+
+```text
+CMP R1, R2
+```
+
+Compares two registers by performing a subtraction internally.
+
+```text
+R1 - R2
+```
+
+The arithmetic result is discarded.
+
+The relevant CPU status flags are updated instead.
+
+Neither source register is modified.
+
+---
+
+## 5.14 JMP
+
+```text
+JMP address
+```
+
+Performs an unconditional jump.
+
+```text
+PC ← address
+```
+
+---
+
+## 5.15 JZ
+
+```text
+JZ address
+```
+
+Jumps when the ZERO flag is set.
+
+```text
+if ZERO == 1:
+    PC ← address
+```
+
+Otherwise execution continues normally.
+
+---
+
+## 5.16 JNZ
+
+```text
+JNZ address
+```
+
+Jumps when the ZERO flag is not set.
+
+```text
+if ZERO == 0:
+    PC ← address
+```
+
+---
+
+## 5.17 JN
+
+```text
+JN address
+```
+
+Jumps when the NEGATIVE flag is set.
+
+```text
+if NEGATIVE == 1:
+    PC ← address
+```
+
+---
+
+## 5.18 PUSH
+
+```text
+PUSH Rs
+```
+
+Stores the source register at the current stack position.
+
+```text
+RAM[SP] ← Rs
+SP ← SP - 1
+```
+
+---
+
+## 5.19 POP
+
+```text
+POP Rd
+```
+
+Moves the stack pointer back to the most recently pushed value and loads that value into the destination register.
+
+```text
+SP ← SP + 1
+Rd ← RAM[SP]
+```
+
+POP does not erase the physical contents of the memory location.
+
+The value is removed from the stack logically because the SP changes. The previous data may remain in RAM until that location is overwritten later.
+
+---
+
+# 6. Instruction Size
+
+Every NYX-16 instruction has a fixed size of:
+
+```text
+2 words
+```
+
+Because each word contains 16 bits:
+
+```text
+2 × 16 bits = 32 bits
+```
+
+Therefore:
+
+```text
+Instruction size = 32 bits
+```
+
+This fixed-size design simplifies instruction fetching and decoding.
+
+Even instructions that do not require the second word still occupy two words.
+
+---
+
+# 7. Instruction Encoding
+
+Every instruction consists of two consecutive words.
+
+## Word 1
+
+Word 1 contains the opcode and register fields.
+
+```text
+ bit 15                               bit 0
+   │                                     │
+   ▼                                     ▼
+
+┌───────────┬──────────┬──────────┬───────────┐
+│  Opcode   │   Reg1   │   Reg2   │ Reserved  │
+│  5 bits   │  3 bits  │  3 bits  │  5 bits   │
+└───────────┴──────────┴──────────┴───────────┘
+  15 - 11     10 - 8      7 - 5       4 - 0
+```
+
+Field positions:
+
+```text
+Opcode → bits 15–11
+Reg1   → bits 10–8
+Reg2   → bits 7–5
+```
+
+Bits 4–0 are reserved for future architectural extensions.
+
+Reserved bits should be zero in NYX-16 v1.0.
+
+---
+
+## Word 2
+
+The second word is a complete 16-bit payload.
+
+```text
+15                                      0
+┌────────────────────────────────────────┐
+│                Payload                 │
+│                16 bits                 │
+└────────────────────────────────────────┘
+```
+
+The meaning of the payload depends on the opcode.
+
+It may represent:
+
+```text
+Immediate value
+Memory address
+Jump target
+Unused data
+```
+
+Examples:
+
+```text
+LDI   → payload is an immediate value
+LOAD  → payload is a memory address
+STORE → payload is a memory address
+JMP   → payload is a jump address
+ADD   → payload is unused
+```
+
+Because the entire second word is used as a single value, it does not require separate bit masks or shifts.
+
+---
+
+# 8. Instruction Formats
+
+Although every instruction has the same physical 32-bit layout, instructions use different logical combinations of the available fields.
+
+NYX-16 defines the following logical formats.
+
+## FORMAT_NONE
+
+Uses only the opcode.
+
+```text
+Opcode
+```
+
+Instructions:
+
+```text
+NOP
+HALT
+```
+
+---
+
+## FORMAT_R
+
+Uses one register.
+
+```text
+Opcode + Reg1
+```
+
+Instructions:
+
+```text
+NOT
+PUSH
+POP
+```
+
+---
+
+## FORMAT_RR
+
+Uses two registers.
+
+```text
+Opcode + Reg1 + Reg2
+```
+
+Instructions:
+
+```text
+MOV
+ADD
+SUB
+AND
+OR
+XOR
+CMP
+```
+
+---
+
+## FORMAT_RP
+
+Uses one register and the 16-bit payload.
+
+```text
+Opcode + Reg1 + Payload
+```
+
+Instructions:
+
+```text
+LDI
+LOAD
+STORE
+```
+
+The meaning of the payload depends on the opcode.
+
+For `LDI`, it is an immediate value.
+
+For `LOAD` and `STORE`, it is a memory address.
+
+---
+
+## FORMAT_A
+
+Uses an address stored in the payload.
+
+```text
+Opcode + Payload
+```
+
+Instructions:
+
+```text
+JMP
+JZ
+JNZ
+JN
+```
+
+---
+
+# 9. Memory Architecture
+
+NYX-16 uses a 16-bit address space.
+
+```text
+Address width = 16 bits
+```
+
+Therefore:
+
+```text
+2^16 = 65,536 possible addresses
+```
+
+Valid addresses range from:
+
+```text
+0x0000
+```
+
+through:
+
+```text
+0xFFFF
+```
+
+---
+
+## 9.1 Word Addressing
+
+NYX-16 memory is **word-addressed**.
+
+Each address identifies one complete 16-bit word.
+
+```text
+RAM[0x0000] → 16 bits
+RAM[0x0001] → 16 bits
+RAM[0x0002] → 16 bits
+...
+RAM[0xFFFF] → 16 bits
+```
+
+This differs from byte-addressed architectures, where each address identifies only 8 bits.
+
+Because NYX-16 has:
+
+```text
+65,536 addresses
+```
+
+and each address stores:
+
+```text
+16 bits = 2 bytes
+```
+
+the total addressable memory is:
+
+```text
+65,536 words
+
+131,072 bytes
+
+128 KiB
+```
+
+---
+
+# 10. Unified Memory
+
+NYX-16 uses a unified memory model.
+
+Instructions and data share the same address space.
+
+The memory hardware itself does not distinguish between instructions and ordinary data.
+
+A memory word becomes part of an instruction when it is fetched through the instruction execution process.
+
+Conceptually:
+
+```text
+RAM
+├── Program instructions
+├── Static data
+├── Heap
+├── Free memory
+└── Stack
+```
+
+---
+
+# 11. Memory Map
+
+The current NYX-16 memory layout is:
+
+```text
+0x0000
+┌─────────────────────────────────┐
+│                                 │
+│ CODE + STATIC DATA              │
+│                                 │
+│ Program instructions            │
+│ Constants                       │
+│ Global/static data              │
+│                                 │
+0x1FFF
+├─────────────────────────────────┤
+0x2000
+│ HEAP                            │
+│ ↓                               │
+│ ↓ grows toward higher addresses │
+│                                 │
+│                                 │
+│          FREE MEMORY            │
+│                                 │
+│                                 │
+│ ↑ grows toward lower addresses  │
+│ ↑                               │
+│ STACK                           │
+│                                 │
+0xFFFF
+└─────────────────────────────────┘
+```
+
+Important addresses:
+
+```text
+Program base = 0x0000
+Heap base    = 0x2000
+Stack base   = 0xFFFF
+```
+
+---
+
+# 12. Program and Static Data Region
+
+Addresses below `0x2000` are reserved for the program image and static data.
+
+```text
+0x0000 – 0x1FFF
+```
+
+The program starts at:
+
+```text
+0x0000
+```
+
+The initial PC value therefore points to the first instruction.
+
+Because each instruction occupies two memory words, sequential instructions normally begin at:
+
+```text
+0x0000
+0x0002
+0x0004
+0x0006
+...
+```
+
+Instruction alignment rules for explicit jump targets are still to be finalized.
+
+---
+
+# 13. Heap
+
+The heap begins at:
+
+```text
+0x2000
+```
+
+and grows toward higher addresses.
+
+```text
+0x2000
+0x2001
+0x2002
+0x2003
+...
+```
+
+The heap is a software-managed region of memory.
+
+The CPU itself does not provide instructions such as:
+
+```text
+MALLOC
+FREE
+```
+
+and currently does not contain a dedicated heap pointer register.
+
+A future runtime or operating-system layer may implement dynamic memory allocation using this region.
+
+The CPU itself only sees ordinary memory addresses.
+
+---
+
+# 14. Stack
+
+The stack begins at the highest address:
+
+```text
+0xFFFF
+```
+
+and grows toward lower addresses.
+
+```text
+0xFFFF
+0xFFFE
+0xFFFD
+0xFFFC
+...
+```
+
+The SP points to the next free stack position.
+
+Initial state:
+
+```text
+SP = 0xFFFF
+```
+
+---
+
+## 14.1 PUSH
+
+For:
+
+```text
+PUSH R1
+```
+
+the CPU performs:
+
+```text
+RAM[SP] ← R1
+SP ← SP - 1
+```
 
 Example:
 
 ```text
-Address     Content
+Initial:
 
-0x0000      First instruction
-0x0001      Second instruction
-0x0002      Third instruction
-0x0003      HALT instruction
+SP = 0xFFFF
+R1 = 42
 ```
 
-The CPU begins execution with:
+After:
 
 ```text
-PC = 0x0000
+PUSH R1
 ```
 
-It reads and executes the instructions until reaching `HALT`.
-
-In version 1.0, the machine instructions will be inserted into RAM directly by the host C program.
-
-This allows the CPU to be developed and tested before the assembler and binary loader exist.
-
----
-
-# Complete Version 1.0 Structure
+the state becomes:
 
 ```text
-NYX-16
-│
-├── RAM
-│   ├── 65,536 addresses
-│   ├── 16-bit word per address
-│   ├── machine instructions
-│   └── program data
-│
-├── CPU
-│   ├── R0–R7
-│   ├── Program Counter
-│   ├── Instruction Register
-│   ├── Zero Flag
-│   ├── Negative Flag
-│   ├── Arithmetic Logic Unit
-│   ├── Instruction Decoder
-│   ├── Control Unit
-│   └── Halted state
-│
-├── Instruction Set Architecture
-│   ├── 16-bit instructions
-│   ├── instruction formats
-│   ├── opcodes
-│   ├── register encoding
-│   └── instruction behavior
-│
-└── Execution Engine
-    ├── fetch
-    ├── decode
-    └── execute
+RAM[0xFFFF] = 42
+SP = 0xFFFE
 ```
 
 ---
 
-# What Makes Nyx-16 a Computer?
+## 14.2 POP
 
-Nyx-16 v1.0 is considered a computer because it contains:
+For:
 
-* memory capable of storing programs and data;
-* a processor capable of executing instructions;
-* registers capable of preserving internal state;
-* an ALU capable of processing values;
-* an instruction set defining machine behavior;
-* a Program Counter controlling program execution;
-* conditional and unconditional control flow;
-* a repeated instruction execution cycle.
+```text
+POP R2
+```
 
-A specific test program may perform an addition or another simple operation, but Nyx-16 itself is not a calculator.
+the CPU performs:
 
-It is a general machine capable of executing different programs composed from its supported instructions.
+```text
+SP ← SP + 1
+R2 ← RAM[SP]
+```
 
----
+If:
 
-# Version 1.0 Scope
+```text
+SP = 0xFFFE
+RAM[0xFFFF] = 42
+```
 
-Nyx-16 v1.0 includes:
+then after:
 
-* 16-bit architecture;
-* word-addressed RAM;
-* 65,536 memory positions;
-* 128 KiB of simulated memory;
-* eight general-purpose registers;
-* Program Counter;
-* Instruction Register;
-* Zero and Negative flags;
-* arithmetic and logical operations;
-* instruction decoding;
-* control logic;
-* a minimal instruction set;
-* fetch-decode-execute cycle;
-* direct program loading through C;
-* execution until `HALT`.
+```text
+POP R2
+```
 
----
+the state becomes:
 
-# Future Components
+```text
+SP = 0xFFFF
+R2 = 42
+```
 
-The following components are not part of Nyx-16 v1.0:
+The value stored at `RAM[0xFFFF]` may still physically remain `42`.
 
-* Nyx Assembly language;
-* assembler;
-* executable binary format;
-* binary loader;
-* Stack Pointer;
-* stack;
-* `PUSH`;
-* `POP`;
-* `CALL`;
-* `RET`;
-* calling convention;
-* terminal input and output;
-* memory-mapped devices;
-* interrupts;
-* system calls;
-* kernel;
-* processes;
-* scheduler;
-* filesystem;
-* compiler.
-
-These features will be built on top of the architecture established by version 1.0.
+The stack considers it removed because its logical state is determined by the SP, not by zeroing unused memory.
 
 ---
 
-# Version 1.0 Completion Criteria
+# 15. Memory Access Instructions
 
-Nyx-16 v1.0 is complete when:
+NYX-16 v1.0 currently uses direct memory addressing for `LOAD` and `STORE`.
 
-1. RAM can store 16-bit instructions and data.
-2. The CPU can read an instruction from the address stored in the PC.
-3. The PC advances after an instruction is fetched.
-4. The IR preserves the current instruction.
-5. The decoder correctly extracts instruction fields.
-6. The control unit selects the correct instruction behavior.
-7. The ALU performs the required operation.
-8. Registers can store and receive results.
-9. RAM can be read and modified by instructions.
-10. Flags are updated after relevant operations.
-11. Jump instructions can modify the PC.
-12. The CPU repeatedly executes the fetch-decode-execute cycle.
-13. The `HALT` instruction stops execution.
-14. Different machine programs can be executed by changing the instructions stored in RAM.
+For example:
+
+```text
+LOAD R1, 0x3000
+```
+
+means:
+
+```text
+R1 ← RAM[0x3000]
+```
+
+And:
+
+```text
+STORE R1, 0x3000
+```
+
+means:
+
+```text
+RAM[0x3000] ← R1
+```
+
+The memory address is stored directly in Word 2 of the instruction.
+
+Register-indirect addressing such as:
+
+```text
+LOAD R1, [R2]
+```
+
+is not currently part of NYX-16 v1.0
