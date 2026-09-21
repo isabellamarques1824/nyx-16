@@ -1,439 +1,295 @@
-# Nyx-16
+# NYX-16
 
-Nyx-16 is a virtual 16-bit computer implemented in C.
+<p align="center">
+  <strong>A virtual 16-bit computer built from scratch in C.</strong>
+</p>
 
-The project was created to study how a computer works from the lowest software-visible level, including registers, memory, machine instructions, arithmetic and logical operations, and the fetch-decode-execute cycle.
-
-Nyx-16 is the final project of the **BASE Saga**, bringing together concepts from C programming, data structures, memory management and computer architecture.
-
----
-
-## Project Objective
-
-The main goal of Nyx-16 is to build a small but complete virtual computer capable of executing programs represented directly as machine instructions.
-
-The project explores how:
-
-* instructions are represented as binary values;
-* instructions and data are stored in memory;
-* the Program Counter identifies the next instruction;
-* the CPU fetches and decodes instructions;
-* the ALU performs arithmetic and logical operations;
-* registers store values and intermediate results;
-* flags describe the result of operations;
-* jumps modify program execution flow;
-* the CPU continuously executes the fetch-decode-execute cycle.
-
-The first version focuses on the essential components required to execute simple machine-code programs.
+<p align="center">
+  <em>Registers. Memory. Machine code. ALU. ISA. Fetch. Decode. Execute.</em>
+</p>
 
 ---
 
-## Nyx-16 v1.0
+## About
 
-Nyx-16 v1.0 will contain:
+**NYX-16** is a virtual 16-bit computer architecture implemented from scratch in C.
 
-* 16-bit words;
-* 16-bit machine instructions;
-* 16-bit memory addresses;
-* 65,536 word-addressable memory locations;
-* 128 KiB of simulated RAM;
-* eight general-purpose registers;
-* Program Counter;
-* Instruction Register;
-* Status Register;
-* Arithmetic Logic Unit;
-* Zero, Negative, Carry and Overflow flags;
-* instruction decoder;
-* control unit;
-* minimal Instruction Set Architecture;
-* fetch-decode-execute cycle;
-* conditional and unconditional jumps;
-* CPU halt behavior.
+The project was created to explore how a computer works below the application level: how instructions are represented as bits, stored in memory, decoded by the CPU, executed, and used to modify registers, memory, and machine state.
 
-Programs will initially be inserted directly into virtual memory through C.
+Instead of emulating an existing processor, NYX-16 defines its own instruction set and architecture.
+
+The goal is to build a complete and understandable computer where the entire path from machine code to execution can be followed.
 
 ---
 
-## Architecture Overview
+## Architecture
+
+NYX-16 currently uses:
+
+- 16-bit words
+- 16-bit memory addresses
+- 8 general-purpose registers
+- fixed 32-bit instructions
+- 2 words per instruction
+- 65,536 word-addressed memory locations
+- unified memory for instructions and data
+- arithmetic and logical status flags
+- direct memory addressing
+- stack operations
+- conditional and unconditional jumps
+
+### CPU Overview
 
 ```text
-NYX-16
-│
-├── RAM
-│   ├── 65,536 addresses
-│   ├── 16-bit words
-│   ├── machine instructions
-│   └── program data
-│
-├── CPU
-│   ├── General-purpose registers
-│   ├── Program Counter
-│   ├── Instruction Register
-│   ├── Status Register
-│   ├── Arithmetic Logic Unit
-│   ├── Instruction Decoder
-│   ├── Control Unit
-│   └── Execution state
-│
-├── Instruction Set Architecture
-│   ├── Instruction formats
-│   ├── Opcodes
-│   ├── Register encoding
-│   └── Instruction behavior
-│
-└── Execution Cycle
-    ├── Fetch
-    ├── Decode
-    └── Execute
+                    NYX-16 CPU
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+    Registers           ALU         Control Unit
+        │                │                │
+     R0-R7          ADD / SUB             │
+     PC / SP         AND / OR             │
+     IR / SR         XOR / NOT            │
+        │                │                │
+        └────────────────┼────────────────┘
+                         │
+                      Decoder
+                         │
+                         ▼
+                       Memory
 ```
 
 ---
 
-## CPU Registers
+## Instruction Set
 
-Nyx-16 v1.0 contains eight general-purpose registers:
+NYX-16 v1.0 defines 19 machine instructions.
 
-```text
-R0
-R1
-R2
-R3
-R4
-R5
-R6
-R7
-```
-
-Each register stores one 16-bit value.
-
-They are used to store operands, intermediate values and operation results.
-
-The CPU also contains three special registers:
-
-```text
-PC — Program Counter
-IR — Instruction Register
-SR — Status Register
-```
-
-### Program Counter
-
-The Program Counter stores the address of the next instruction to be fetched.
-
-During normal execution, the PC advances after an instruction is fetched.
-
-Jump instructions can replace its value and redirect program execution.
-
-### Instruction Register
-
-The Instruction Register stores the instruction currently being decoded and executed.
-
-During the fetch stage:
-
-```text
-IR = RAM[PC]
-```
-
-### Status Register
-
-The Status Register stores CPU flags produced by relevant operations.
-
-Nyx-16 v1.0 uses four flags:
-
-```text
-Z — Zero
-N — Negative
-C — Carry
-V — Overflow
-```
-
-Each flag occupies one bit inside the Status Register.
-
-The flags are used to describe operation results and support conditional execution.
+| Category | Instructions |
+|---|---|
+| System | `NOP`, `HALT` |
+| Data movement | `MOV`, `LDI` |
+| Memory | `LOAD`, `STORE` |
+| Arithmetic | `ADD`, `SUB` |
+| Logic | `AND`, `OR`, `XOR`, `NOT` |
+| Comparison | `CMP` |
+| Control flow | `JMP`, `JZ`, `JNZ`, `JN` |
+| Stack | `PUSH`, `POP` |
 
 ---
 
-## RAM
+## Instruction Encoding
 
-Nyx-16 uses a unified virtual memory for both machine instructions and program data.
-
-Memory addresses are 16 bits wide:
+Every instruction occupies two 16-bit words.
 
 ```text
-2¹⁶ = 65,536 addresses
+WORD 1
+
+15        11 10      8 7       5 4       0
+┌──────────┬──────────┬─────────┬─────────┐
+│ Opcode   │   Reg1   │  Reg2   │ Reserved│
+│ 5 bits   │ 3 bits   │ 3 bits  │ 5 bits │
+└──────────┴──────────┴─────────┴─────────┘
+
+
+WORD 2
+
+15                                      0
+┌────────────────────────────────────────┐
+│                Payload                 │
+│                16 bits                 │
+└────────────────────────────────────────┘
 ```
 
-Each address stores one 16-bit word.
-
-This results in:
-
-```text
-65,536 × 2 bytes = 128 KiB
-```
-
-of simulated memory.
+The payload may represent an immediate value, memory address, jump target, or remain unused depending on the instruction.
 
 ---
 
-## Arithmetic Logic Unit
+## Memory
 
-The Arithmetic Logic Unit, or `ALU`, performs arithmetic and logical operations on 16-bit values.
+NYX-16 uses **word-addressed memory**.
 
-The initial ALU is expected to support operations such as:
+Each address stores one complete 16-bit word.
 
 ```text
-ADD
-SUB
-AND
-OR
-XOR
-NOT
+0x0000
+┌─────────────────────────────┐
+│ Code + Static Data          │
+│                             │
+0x1FFF
+├─────────────────────────────┤
+0x2000
+│ Heap                        │
+│ ↓                           │
+│                             │
+│        Free Memory          │
+│                             │
+│                           ↑ │
+│ Stack                       │
+│                             │
+0xFFFF
+└─────────────────────────────┘
 ```
 
-Relevant operations may update the Status Register flags.
+The complete address space contains:
+
+```text
+65,536 words
+128 KiB
+```
 
 ---
 
-## Instruction Decoder
+## Fetch — Decode — Execute
 
-Machine instructions are stored as 16-bit values.
+Programs are executed through the classic instruction cycle:
 
-The instruction decoder interprets the bits stored in the Instruction Register and extracts the information required to execute the instruction.
+```text
+Machine Code
+     │
+     ▼
+   Memory
+     │
+     ▼
+   Fetch
+     │
+     ▼
+   Decode
+     │
+     ▼
+  Execute
+     │
+     ▼
+Registers / Memory / Flags
+```
 
-Depending on the instruction format, this may include:
+A normal instruction fetch reads:
 
-* opcode;
-* destination register;
-* source register;
-* immediate value;
-* memory address.
+```text
+RAM[PC]     → Word 1
+RAM[PC + 1] → Word 2
+```
 
-The exact instruction encoding will be defined as part of the Nyx-16 ISA.
+The Program Counter then advances to the next instruction.
 
 ---
 
-## Control Unit
+## Current Status
 
-The control unit coordinates CPU execution.
-
-It determines:
-
-* which registers are read;
-* which ALU operation is performed;
-* where results are stored;
-* whether memory is read or written;
-* whether flags are updated;
-* whether the Program Counter advances or changes;
-* whether the CPU continues running or halts.
-
----
-
-## Fetch-Decode-Execute Cycle
-
-Nyx-16 executes programs through a repeated three-stage cycle.
-
-### Fetch
-
-The CPU retrieves the next instruction from memory.
-
-```text
-IR = RAM[PC]
-PC = PC + 1
-```
-
-### Decode
-
-The instruction decoder interprets the instruction stored in the IR and determines what operation must be performed.
-
-### Execute
-
-The control unit performs the instruction behavior.
-
-This may modify:
-
-* registers;
-* memory;
-* CPU flags;
-* the Program Counter;
-* the CPU execution state.
-
-```text
-FETCH
-  ↓
-DECODE
-  ↓
-EXECUTE
-  ↓
-FETCH
-```
-
-The cycle continues until a `HALT` instruction stops the processor.
+| Component | Status |
+|---|---|
+| Registers | ✅ Complete |
+| ALU | ✅ Complete |
+| ALU Tests | ✅ Complete |
+| ISA | ✅ v1.0 defined |
+| Instruction Encoding | ✅ Complete |
+| Memory Architecture | ✅ Defined |
+| Memory Implementation | 🚧 In progress |
+| Decoder | ⏳ Planned |
+| Control Unit | ⏳ Planned |
+| CPU Execution Cycle | ⏳ Planned |
+| Loader | ⏳ Planned |
+| Assembler | ⏳ Planned |
 
 ---
 
-## Initial Instruction Set
+## NYX-16 v1.0
 
-Nyx-16 v1.0 will use a small Instruction Set Architecture containing only the operations required to execute basic programs.
+The first complete version of NYX-16 will be able to:
 
-### Data Movement
+1. load machine code into memory;
+2. fetch instructions using the Program Counter;
+3. decode NYX-16 instructions;
+4. execute arithmetic and logical operations;
+5. read and write memory;
+6. perform conditional and unconditional jumps;
+7. use a stack;
+8. update CPU status flags;
+9. continuously execute instructions;
+10. stop when `HALT` is reached.
 
-```text
-LOADI
-LOAD
-STORE
-MOV
-```
+The complete scope is documented in:
 
-### Arithmetic
+[`docs/v1.0.md`](docs/v1.0.md)
 
-```text
-ADD
-SUB
-```
+---
 
-### Logic
+## Documentation
 
-```text
-AND
-OR
-XOR
-NOT
-```
+More detailed documentation is available in the `docs` directory.
 
-### Control Flow
-
-```text
-JMP
-JZ
-HALT
-```
-
-The final instruction formats, opcode values and behavior will be documented separately in the ISA specification.
+- [`architecture.md`](docs/architecture.md) — architecture and machine behavior
+- [`v1.0.md`](docs/v1.0.md) — scope of the first complete version
 
 ---
 
 ## Project Structure
 
 ```text
-nyx16/
-├── docs/
+NYX-16/
+│
 ├── include/
+│   ├── alu.h
+│   ├── registers.h
+│   ├── isa.h
+│   └── ...
+│
 ├── src/
+│   ├── alu.c
+│   ├── registers.c
+│   ├── isa.c
+│   └── ...
+│
 ├── tests/
-├── programs/
+│
+├── docs/
+│   ├── architecture.md
+│   └── v1.0.md
+│
 └── README.md
 ```
 
-### `docs/`
-
-Architecture and technical documentation.
-
-### `include/`
-
-Public C header files.
-
-### `src/`
-
-Implementation of the virtual computer.
-
-### `tests/`
-
-Tests for individual components and CPU behavior.
-
-### `programs/`
-
-Machine-code programs used to test the architecture.
+The project structure will evolve as the CPU implementation progresses.
 
 ---
 
-## Current Status
+## Why NYX-16?
 
-Nyx-16 is currently under active development.
+Modern computers hide enormous amounts of complexity behind layers of abstraction.
 
-The register subsystem is implemented, including:
+NYX-16 takes the opposite approach.
 
-* eight 16-bit general-purpose registers;
-* Program Counter;
-* Instruction Register;
-* Status Register;
-* Zero, Negative, Carry and Overflow flags.
-
-The register module currently supports register initialization, general-purpose register access, Program Counter manipulation, Instruction Register loading and individual flag manipulation.
-
-The next major CPU component is the **Arithmetic Logic Unit**.
-
-RAM, the instruction format, ISA, decoder, control unit and complete fetch-decode-execute cycle will be implemented as the architecture continues to evolve.
-
----
-
-## Version 1.0
-
-Nyx-16 v1.0 will be considered complete when it can:
-
-* store instructions and data in virtual RAM;
-* fetch instructions using the Program Counter;
-* decode 16-bit machine instructions;
-* execute arithmetic and logical operations;
-* store results in registers and memory;
-* update and read CPU flags;
-* perform conditional and unconditional jumps;
-* repeatedly execute the fetch-decode-execute cycle;
-* stop execution through `HALT`;
-* execute different programs by changing the machine instructions stored in memory.
-
-At that point, Nyx-16 will function as a complete minimal virtual computer.
-
----
-
-## Future Development
-
-Later versions may expand the architecture with:
-
-* Nyx Assembly;
-* assembler;
-* binary executable format;
-* binary loader;
-* stack;
-* Stack Pointer;
-* `PUSH` and `POP`;
-* `CALL` and `RET`;
-* calling convention;
-* terminal input and output;
-* memory-mapped devices;
-* system calls;
-* interrupts;
-* kernel;
-* processes;
-* context switching;
-* scheduler;
-* filesystem;
-* high-level programming language;
-* compiler.
-
-The long-term goal is to progressively build a complete software stack on top of the Nyx-16 architecture.
+The project builds those layers manually in order to understand how they connect:
 
 ```text
-Nyx Source Code
-      ↓
-Compiler
-      ↓
-Nyx Assembly
-      ↓
-Assembler
-      ↓
-Nyx Binary
-      ↓
-Loader
-      ↓
-Virtual RAM
-      ↓
-Nyx-16 CPU
-      ↓
-Input / Output
-      ↓
-System Calls
-      ↓
-Operating System
+Machine Code
+     ↓
+Memory
+     ↓
+CPU
+     ↓
+Fetch
+     ↓
+Decode
+     ↓
+Execute
+     ↓
+Registers / ALU / Memory
 ```
 
-Nyx-16 v1.0 provides the foundation for everything that comes after it.
+The objective is not to create the fastest processor.
+
+The objective is to understand one completely.
+
+---
+
+## References
+
+NYX-16 is being developed alongside the study of computer architecture, systems programming, and low-level software.
+
+Main references include:
+
+- *Computer Organization and Architecture* — William Stallings
+- *The Elements of Computing Systems* — Nisan & Schocken
+- *Computer Systems: A Programmer's Perspective* — Bryant & O'Hallaron
+- *Operating Systems: Three Easy Pieces* — Remzi H. Arpaci-Dusseau & Andrea C. Arpaci-Dusseau
